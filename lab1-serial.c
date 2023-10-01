@@ -4,6 +4,7 @@
 #include "timer.h"
 
 #define DT 0.05
+#define eps 0.00000001
 
 typedef struct
 {
@@ -42,6 +43,13 @@ double mod(vector a)
     return sqrt(a.x * a.x + a.y * a.y);
 }
 
+int isCollision(vector point1, vector point2){
+    return (
+        fabs(point1.x - point2.x) < eps && 
+        fabs(point1.y - point2.y) < eps
+    );
+}
+
 void initiateSystem(char *fileName)
 {
     int i;
@@ -71,8 +79,7 @@ void resolveCollisions()
     for (i = 0; i < bodies - 1; i++)
         for (j = i + 1; j < bodies; j++)
         {
-            if (positions[i].x == positions[j].x && positions[i].y == positions[j].y)
-            {
+            if (isCollision(positions[i], positions[j])){
                 vector temp = velocities[i];
                 velocities[i] = velocities[j];
                 velocities[j] = temp;
@@ -158,5 +165,8 @@ int main()
             printf("bodies=%d, timeSteps=%d: %f\n", bodies, timeSteps, time);
         }
     }
+    free(accelerations);
+    free(velocities);
+    free(positions);
     return 0;
 }
