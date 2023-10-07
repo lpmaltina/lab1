@@ -14,11 +14,37 @@ typedef struct
 
 
 int thread_count = 5;
-pthread_mutex_t mutex;
+pthread_mutex_t mutex, barrier_mutex;
 FILE* outputFile;
 int bodies, timeSteps;
 double *masses, GravConstant;
 vector *positions, *velocities, *accelerations;
+pthread_cond_t cond_var;
+int counter = 0;
+
+
+void* barrier(void* rank)
+{
+
+    pthread_cond_init(&cond_var, NULL);
+    pthread_mutex_init(&barrier_mutex, NULL);
+
+    pthread_mutex_lock(&barrier_mutex);
+    counter++;
+    if(counter == thread_count)
+    {
+        counter = 0;
+        pthread_cond_broadcast(&cond_var);
+    }
+    else
+    {
+        while(pthread_cond_wait(&cond_var, &barrier_mutex) != 0);
+    }
+    pthread_mutex_unlock(&barrier_mutex);
+
+    pthread_cond_destroy(&cond_var);
+    pthread_mutex_destroy(&barrier_mutex);
+}
 
 
 vector addVectors(vector a, vector b)
@@ -181,6 +207,7 @@ int main()
 
     fclose(outputFile);
     free(pthread_handles);
+    free(masses);
     free(accelerations);
     free(velocities);
     free(positions);
