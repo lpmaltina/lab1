@@ -165,6 +165,7 @@ int main()
             printf("bodies=%d, timeSteps=%d: %f\n", bodies, timeSteps, time);
         }
     }
+    free(masses);
     free(accelerations);
     free(velocities);
     free(positions);

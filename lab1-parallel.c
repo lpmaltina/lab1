@@ -129,18 +129,25 @@ void computeAccelerations(int start, int finish)
     int i, j;
     for (i = start; i < finish; i++)
     {
+        vector accelerationI = accelerations[i];
         for (j = i + 1; j < bodies; j++)
         {
             vector positionsDiff = subtractVectors(positions[j], positions[i]);
             vector withoutMass = scaleVector(GravConstant / pow(mod(positionsDiff), 3), positionsDiff);
             vector changeAccelerationI = scaleVector(masses[j], withoutMass);
             vector changeAccelerationJ = scaleVector(masses[i], withoutMass);
+            accelerationI = addVectors(accelerationI, changeAccelerationI);
+            vector accelerationJ = subtractVectors(accelerations[j], changeAccelerationJ);
+            
             pthread_mutex_lock(&mutex);
-            accelerations[i] = addVectors(accelerations[i], changeAccelerationI);
-            accelerations[j] = subtractVectors(accelerations[j], changeAccelerationJ);
+            accelerations[j] = accelerationJ;
             pthread_mutex_unlock(&mutex);
         }
-    }    
+        
+        pthread_mutex_lock(&mutex);
+        accelerations[i] = accelerationI;
+        pthread_mutex_unlock(&mutex);
+    }
 }
 
 
