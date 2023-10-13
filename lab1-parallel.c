@@ -101,29 +101,6 @@ void initiateSystem(char *fileName)
 }
 
 
-int isCollision(vector point1, vector point2){
-    return (
-        fabs(point1.x - point2.x) < eps && 
-        fabs(point1.y - point2.y) < eps
-    );
-}
-
-
-void resolveCollisions()
-{
-    int i, j;
-    for (i = 0; i < bodies - 1; i++)
-        for (j = i + 1; j < bodies; j++)
-        {
-            if (isCollision(positions[i], positions[j])){
-                vector temp = velocities[i];
-                velocities[i] = velocities[j];
-                velocities[j] = temp;
-            }
-        }
-}
-
-
 void computeAccelerations(int start, int finish)
 {
     int i, j;
@@ -135,7 +112,11 @@ void computeAccelerations(int start, int finish)
             if (i != j)
             {
                 vector positionsDiff = subtractVectors(positions[j], positions[i]);
-                vector withoutMass = scaleVector(GravConstant / pow(mod(positionsDiff), 3), positionsDiff);
+                double denominator = pow(mod(positionsDiff), 3);
+                if (denominator < eps){
+                    denominator = eps;
+                }
+                vector withoutMass = scaleVector(GravConstant / denominator, positionsDiff);
                 vector accelerationIJ = scaleVector(masses[j], withoutMass);
                 accelerationI = addVectors(accelerationI, accelerationIJ);
                
@@ -196,8 +177,8 @@ int main()
 {
     int i, j;
     int timeStep = 0;
-    initiateSystem("input/input-1000-1000");
-    outputFile = fopen("output/output-parallel-1000-1000", "a");
+    initiateSystem("input/input-10-1000");
+    outputFile = fopen("output/output-parallel-10-1000", "a");
     fprintf(outputFile, "t\t");
     for (j = 1; j < bodies + 1; ++j){
         fprintf(outputFile, "x%d\ty%d\t", j, j);

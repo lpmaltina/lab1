@@ -72,21 +72,6 @@ void initiateSystem(char *fileName)
     fclose(fp);
 }
 
-void resolveCollisions()
-{
-    int i, j;
-
-    for (i = 0; i < bodies - 1; i++)
-        for (j = i + 1; j < bodies; j++)
-        {
-            if (isCollision(positions[i], positions[j])){
-                vector temp = velocities[i];
-                velocities[i] = velocities[j];
-                velocities[j] = temp;
-            }
-        }
-}
-
 void computeAccelerations()
 {
     int i, j;
@@ -99,7 +84,11 @@ void computeAccelerations()
         {
             if (i != j)
             {
-                accelerations[i] = addVectors(accelerations[i], scaleVector(GravConstant * masses[j] / pow(mod(subtractVectors(positions[i], positions[j])), 3), subtractVectors(positions[j], positions[i])));
+                double denominator = pow(mod(subtractVectors(positions[i], positions[j])), 3);
+                if (denominator < eps){
+                    denominator = eps;
+                }
+                accelerations[i] = addVectors(accelerations[i], scaleVector(GravConstant * masses[j] / denominator, subtractVectors(positions[j], positions[i])));
             }
         }
     }
@@ -126,7 +115,6 @@ void simulate()
     computeAccelerations();
     computePositions();
     computeVelocities();
-    //resolveCollisions();
 }
 
 int main()
