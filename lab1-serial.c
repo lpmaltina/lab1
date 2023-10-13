@@ -126,7 +126,7 @@ void simulate()
     computeAccelerations();
     computePositions();
     computeVelocities();
-    resolveCollisions();
+    //resolveCollisions();
 }
 
 int main()
