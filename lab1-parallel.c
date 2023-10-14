@@ -3,7 +3,6 @@
 #include <math.h>
 #include <pthread.h>
 
-
 #define DT 0.05
 #define eps 0.00000001
 
@@ -19,6 +18,7 @@ FILE* outputFile;
 int bodies, timeSteps;
 double *masses, GravConstant;
 vector *positions, *velocities, *accelerations;
+vector *next_positions, *next_velocities;
 pthread_cond_t cond_var;
 int counter = 0;
 
@@ -89,6 +89,8 @@ void initiateSystem(char *fileName)
     positions = (vector *)malloc(bodies * sizeof(vector));
     velocities = (vector *)malloc(bodies * sizeof(vector));
     accelerations = (vector *)malloc(bodies * sizeof(vector));
+    next_positions = (vector *)malloc(bodies * sizeof(vector));
+    next_velocities = (vector *)malloc(bodies * sizeof(vector));
 
     for (i = 0; i < bodies; i++)
     {
@@ -131,7 +133,7 @@ void computeVelocities(int start, int finish)
 {
     int i;
     for (i = start; i < finish; i++)
-        velocities[i] = addVectors(velocities[i], scaleVector(DT, accelerations[i]));
+        next_velocities[i] = addVectors(velocities[i], scaleVector(DT, accelerations[i]));
 }
 
 
@@ -139,7 +141,14 @@ void computePositions(int start, int finish)
 {
     int i;
     for (i = start; i < finish; i++)
-        positions[i] = addVectors(positions[i], scaleVector(DT, velocities[i]));
+        next_positions[i] = addVectors(positions[i], scaleVector(DT, velocities[i]));
+}
+
+void updateArrays(int start, int finish){
+    for (int i = start; i < finish; ++i){
+        positions[i] = next_positions[i];
+        velocities[i] = next_velocities[i];
+    }
 }
 
 void* routine(void* nthread){
@@ -149,16 +158,15 @@ void* routine(void* nthread){
     int my_last_point = my_first_point + my_points;
     
      for (int i = 0; i < timeSteps; ++i){
-        for (int j = 0; j < bodies; ++j){
+        for (int j = my_first_point; j < my_last_point; ++j){
             accelerations[j].x = 0;
             accelerations[j].y = 0;
         }
-        pthread_barrier_wait(&barrier);
         computeAccelerations(my_first_point, my_last_point);
-        pthread_barrier_wait(&barrier);
-        computePositions(my_first_point, my_last_point);
-        pthread_barrier_wait(&barrier);
+        computePositions(my_first_point, my_last_point); 
         computeVelocities(my_first_point, my_last_point);
+        pthread_barrier_wait(&barrier);
+        updateArrays(my_first_point, my_last_point);
         pthread_barrier_wait(&barrier);
         if (my_nthread == 0){
             fprintf(outputFile, "%d\t", i + 1);
@@ -203,5 +211,7 @@ int main()
     free(accelerations);
     free(velocities);
     free(positions);
+    free(next_positions);
+    free(next_velocities);
     return 0;
 }
