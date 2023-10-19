@@ -106,25 +106,43 @@ void initiateSystem(char *fileName)
 void computeAccelerations(int start, int finish)
 {
     int i, j;
-    for (i = start; i < finish; i++)
-    {
-        vector accelerationI = accelerations[i];
-        for (j = 0; j < bodies; j++)
-        {
-            if (i != j)
-            {
-                vector positionsDiff = subtractVectors(positions[j], positions[i]);
-                double denominator = pow(mod(positionsDiff), 3);
-                if (denominator < eps){
-                    denominator = eps;
-                }
-                vector withoutMass = scaleVector(GravConstant / denominator, positionsDiff);
-                vector accelerationIJ = scaleVector(masses[j], withoutMass);
-                accelerationI = addVectors(accelerationI, accelerationIJ);
-               
-            }
+
+	vector accelerationI = {0};
+	vector accelerationJ = {0};
+
+    for (i = start; i < finish; i++) {
+
+		/* LOCK mutex here */
+		accelerationI = 0;
+		/* UNLOCK mutex here */
+
+        for (j = i + 1; j < bodies; j++) {
+
+			vector positionsDiff = subtractVectors(positions[j], positions[i]);
+
+			double denominator = pow(mod(positionsDiff), 3);
+			if (denominator < eps){
+				denominator = eps;
+			}
+
+			vector withoutMass = scaleVector(GravConstant / denominator, positionsDiff);
+
+			/* LOCK mutex here */
+			accelerationJ = accelerations[j];
+			/* UNLOCK mutex here */
+
+			vector accelerationIJ = scaleVector(masses[j], withoutMass);
+			vector accelerationJI = scaleVector(-masses[i], withoutMass);
+			accelerationI = addVectors(accelerationI, accelerationIJ);
+			accelerationJ = addVectors(accelerationJ, accelerationJI);
+
+			/* LOCK mutex here */
+			accelerations[j] = accelerationJ;
+			/* UNLOCK mutex here */
         }
-        accelerations[i] = accelerationI;
+		/* LOCK mutex here */
+        accelerations[i] += accelerationI;
+		/* UNLOCK mutex here */
     }
 }
 
@@ -140,8 +158,9 @@ void computeVelocities(int start, int finish)
 void computePositions(int start, int finish)
 {
     int i;
-    for (i = start; i < finish; i++)
+    for (i = start; i < finish; i++) {
         next_positions[i] = addVectors(positions[i], scaleVector(DT, velocities[i]));
+	}
 }
 
 void updateArrays(int start, int finish){
