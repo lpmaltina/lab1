@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from matplotlib import pyplot as plt
 from celluloid import Camera
 from tqdm import tqdm
@@ -21,7 +23,10 @@ def read_output_data(filename, data, bodies, time_steps):
     with open(filename, "r", encoding="utf-8") as f:
         f.readline()  # header
         for i in range(time_steps):
-            _, *coords = f.readline().split()
+            lineCur = f.readline()
+            if not lineCur:
+                break
+            _, *coords = lineCur.split()
             data.append({"x": [], "y": []})
             for j in range(bodies):
                 x = float(coords[j * 2])
@@ -37,7 +42,7 @@ def create_animation(data, bodies, time_steps):
     delta_x = (xmax - xmin) / 10
     delta_y = (ymax - ymin) / 10
 
-    for i in tqdm(range((time_steps + 1))):
+    for i in tqdm(range(time_steps + 1)):
         t = plt.scatter(data[i]["x"], data[i]["y"], color="blue")
 
         for j in range(bodies):
@@ -57,8 +62,15 @@ def create_animation(data, bodies, time_steps):
 
 if __name__ == "__main__":
     mode = "serial"
-    for bodies in (10, 100):
-        for time_steps in (10, 100, 1000):
-            data = read_input_data(f"input/input-{bodies}-{time_steps}")
-            read_output_data(f"output/output-{mode}-{bodies}-{time_steps}", data, bodies, time_steps)
-            create_animation(data, bodies, time_steps)
+    bodies = 10
+    time_steps = 10
+
+    data = read_input_data(f"input/input-10-10")
+    read_output_data(f"output/output-{mode}-{bodies}-10", data, bodies, time_steps)
+    create_animation(data, bodies, time_steps)
+
+    # for bodies in (10, 100):
+    #     for time_steps in (10, 100, 1000):
+            
+    #         read_output_data(f"output/output-{mode}-{bodies}-{time_steps}", data, bodies, time_steps)
+    #         create_animation(data, bodies, time_steps)

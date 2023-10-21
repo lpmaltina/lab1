@@ -1,0 +1,10 @@
+*.o
+*.out
+*.run
+
+*~
+
+/input
+/output
+/animations
+/build
