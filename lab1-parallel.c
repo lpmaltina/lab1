@@ -7,108 +7,118 @@ int thread_count = 5;
 pthread_barrier_t barrier = {0};
 pthread_mutex_t mutex, barrier_mutex = {0};
 pthread_cond_t cond_var = {0};
-pthread_rwlock_t rwlock = {0}; /* used in computeAccelerations */
+pthread_rwlock_t rwlock = {0}; /* used in computeAccels */
 
 
-vec *next_poses = NULL, *next_velocities = NULL;
+vec *next_poses = NULL, *next_vels = NULL;
 int counter = 0;
 
 
-void computeAccelerations(int start, int finish)
+void computeAccels(int start, int finish)
 {
-    int i, j;
+    int i = 0;
+	int j = 0;
+	double denom = 0.;
 
-	vec accelerationI = {0};
-	vec accelerationJ = {0};
+	vec vec_pose_diff = {0};
+	vec vec_without_mass = {0};
+	vec vec_acc_i = {0};
+	vec vec_acc_j = {0};
+	vec vec_acc_ij = {0};
+	vec vec_acc_ji = {0};
 
     for (i = start; i < finish; i++) {
 
-		pthread_rwlock_rdlock(&rwlock);
-		accelerationI = accelerations[i];
-		pthread_rwlock_unlock(&rwlock);
+
+		vec_acc_i = accels[i];
+
 
         for (j = i + 1; j < bodies; j++) {
 
-			vec posesDiff = subVecs(poses[j], poses[i]);
+			vec_pose_diff = subVecs(poses[j], poses[i]);
 
-			double denominator = pow(modVec(posesDiff), 3);
-			if (denominator < eps){
-				denominator = eps;
+			denom = pow(modVec(vec_pose_diff), 3);
+			if (denom < eps){
+				denom = eps;
 			}
 
-			vec withoutMass =
-				scaleVec(GravConstant / denominator, posesDiff);
+			vec_without_mass = scaleVec(GravConst / denom, vec_pose_diff);
 
-			pthread_rwlock_rdlock(&rwlock);
-			accelerationJ = accelerations[j];
-			pthread_rwlock_unlock(&rwlock);
 
-			vec accelerationIJ = scaleVec(masses[j], withoutMass);
-			vec accelerationJI = scaleVec(-masses[i], withoutMass);
-			accelerationI = addVecs(accelerationI, accelerationIJ);
-			accelerationJ = addVecs(accelerationJ, accelerationJI);
+			vec_acc_j = accels[j];
 
-			pthread_rwlock_wrlock(&rwlock);
-			accelerations[j] = accelerationJ;
-			pthread_rwlock_unlock(&rwlock);
+
+			vec_acc_ij = scaleVec(masses[j], vec_without_mass);
+			vec_acc_ji = scaleVec(-masses[i], vec_without_mass);
+			vec_acc_i = addVecs(vec_acc_i, vec_acc_ij);
+			vec_acc_j = addVecs(vec_acc_j, vec_acc_ji);
+
+
+			accels[j] = vec_acc_j;
+
         }
-		pthread_rwlock_wrlock(&rwlock);
-        accelerations[i] = accelerationI;
-		pthread_rwlock_unlock(&rwlock);
+
+        accels[i] = vec_acc_i;
+
     }
 }
 
-
-void computeVelocities(int start, int finish)
+void computeVels(int start, int finish)
 {
-    int i;
-    for (i = start; i < finish; i++)
-        next_velocities[i] = addVecs(velocities[i], scaleVec(DT, accelerations[i]));
-}
-
-
-void computePoses(int start, int finish)
-{
-    int i;
+    int i = 0;
     for (i = start; i < finish; i++) {
-        next_poses[i] = addVecs(poses[i], scaleVec(DT, velocities[i]));
+        next_vels[i] = addVecs(vels[i], scaleVec(DT, accels[i]));
 	}
 }
 
-void updateArrays(int start, int finish){
+void computePoses(int start, int finish)
+{
+    int i = 0;
+    for (i = start; i < finish; i++) {
+        next_poses[i] = addVecs(poses[i], scaleVec(DT, vels[i]));
+	}
+}
+
+void updateArrays(int start, int finish)
+{
     for (int i = start; i < finish; ++i){
         poses[i] = next_poses[i];
-        velocities[i] = next_velocities[i];
+        vels[i] = next_vels[i];
     }
 }
 
-void* routine(void* nthread){
+void* routine(void* nthread)
+{
+	int i = 0;
+	int j = 0;
+
     long long my_nthread = (long long) nthread;
     int my_points = bodies / thread_count;
     int my_first_point = my_nthread * my_points;
     int my_last_point = my_first_point + my_points;
     
-     for (int i = 0; i < timeSteps; ++i){
+     for (i = 0; i < timeSteps; ++i) {
 
 		pthread_mutex_lock(&mutex);
 
-        for (int j = my_first_point; j < my_last_point; ++j) {
-            accelerations[j] = vecEmpty;
+        for (j = my_first_point; j < my_last_point; ++j) {
+            accels[j] = vecEmpty;
         }
 
-        computeAccelerations(my_first_point, my_last_point);
+        computeAccels(my_first_point, my_last_point);
         computePoses(my_first_point, my_last_point); 
-        computeVelocities(my_first_point, my_last_point);
+        computeVels(my_first_point, my_last_point);
 
 		pthread_mutex_unlock(&mutex);
 
         pthread_barrier_wait(&barrier);
         updateArrays(my_first_point, my_last_point);
         pthread_barrier_wait(&barrier);
+
         if (my_nthread == 0){
             fprintf(fOut, "%d\t", i + 1);
-            for (int j = 0; j < bodies; j++){
-                fprintf(fOut, "%.20f\t%.20f\t", poses[j].x, poses[j].y);
+            for (j = 0; j < bodies; j++){
+                fprintf(fOut, "%.20f\t%.20f\t", accels[j].x, accels[j].y);
             }
             fprintf(fOut, "\n");
         }
@@ -117,21 +127,15 @@ void* routine(void* nthread){
     return NULL;
 }
 
-
 int main()
 {
-    initiateSystem(
+    rslt = initiateSystem(
 		"input/input-10-10",
 		"output/output-parallel-10-10");
-
-    fprintf(fOut, "t\t");
-    for (int j = 1; j < bodies + 1; ++j){
-        fprintf(fOut, "x%d\ty%d\t", j, j);
-    }
-    fprintf(fOut, "\n");
+	if (rslt != 0) { return 1; }
 
     next_poses = (vec *)malloc(bodies * sizeof(vec));
-    next_velocities = (vec *)malloc(bodies * sizeof(vec));
+    next_vels = (vec *)malloc(bodies * sizeof(vec));
     
     pthread_barrier_init(&barrier, NULL, thread_count);
 
@@ -150,10 +154,10 @@ int main()
     pthread_barrier_destroy(&barrier);
     fclose(fOut);
     free(masses);
-    free(accelerations);
-    free(velocities);
+    free(accels);
+    free(vels);
     free(poses);
     free(next_poses);
-    free(next_velocities);
+    free(next_vels);
     return 0;
 }

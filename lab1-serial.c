@@ -1,78 +1,214 @@
 #include "universal.h"
 
 
-void computeAccelerations()
+void computeAccels()
 {
-    int i, j;
+    int i = 0;
+	int j = 0;
+	double denom = 0.;
 
-    for (i = 0; i < bodies; i++)
-    {
-        accelerations[i].x = 0;
-        accelerations[i].y = 0;
-        for (j = 0; j < bodies; j++)
-        {
-            if (i != j)
-            {
-                double denominator = pow(modVec(subVecs(poses[i], poses[j])), 3);
-                if (denominator < eps){
-                    denominator = eps;
-                }
-                accelerations[i] = addVecs(accelerations[i], scaleVec(GravConstant * masses[j] / denominator, subVecs(poses[j], poses[i])));
-            }
+	vec vec_pose_diff = {0};
+	vec vec_without_mass = {0};
+	vec vec_acc_i = {0};
+	vec vec_acc_j = {0};
+	vec vec_acc_ij = {0};
+	vec vec_acc_ji = {0};
+
+    for (i = 0; i < bodies; i++) {
+
+
+		vec_acc_i = accels[i];
+
+
+        for (j = i + 1; j < bodies; j++) {
+
+			vec_pose_diff = subVecs(poses[j], poses[i]);
+
+			denom = pow(modVec(vec_pose_diff), 3);
+			if (denom < eps){
+				denom = eps;
+			}
+
+			vec_without_mass = scaleVec(GravConst / denom, vec_pose_diff);
+
+
+			vec_acc_j = accels[j];
+
+
+			vec_acc_ij = scaleVec(masses[j], vec_without_mass);
+			vec_acc_ji = scaleVec(-masses[i], vec_without_mass);
+			vec_acc_i = addVecs(vec_acc_i, vec_acc_ij);
+			vec_acc_j = addVecs(vec_acc_j, vec_acc_ji);
+
+
+			accels[j] = vec_acc_j;
+
         }
+
+		accels[i] = vec_acc_i;
+
     }
 }
 
-void computeVelocities()
+void computeAccels1()
 {
-    int i;
+    int i = 0;
+	int j = 0;
+	double denom = 0.;
 
-    for (i = 0; i < bodies; i++)
-        velocities[i] = addVecs(velocities[i], scaleVec(DT, accelerations[i]));
+	vec vec_pose_diff = {0};
+	vec vec_without_mass = {0};
+	vec vec_acc_i = {0};
+	vec vec_acc_j = {0};
+	vec vec_acc_ij = {0};
+	vec vec_acc_ji = {0};
+
+    for (i = 0; i < bodies / 2; i++) {
+
+
+		vec_acc_i = accels[i];
+
+
+        for (j = i + 1; j < bodies; j++) {
+
+			vec_pose_diff = subVecs(poses[j], poses[i]);
+
+			denom = pow(modVec(vec_pose_diff), 3);
+			if (denom < eps){
+				denom = eps;
+			}
+
+			vec_without_mass = scaleVec(GravConst / denom, vec_pose_diff);
+
+
+			vec_acc_j = accels[j];
+
+
+			vec_acc_ij = scaleVec(masses[j], vec_without_mass);
+			vec_acc_ji = scaleVec(-masses[i], vec_without_mass);
+			vec_acc_i = addVecs(vec_acc_i, vec_acc_ij);
+			vec_acc_j = addVecs(vec_acc_j, vec_acc_ji);
+
+
+			accels[j] = vec_acc_j;
+
+        }
+
+		accels[i] = vec_acc_i;
+
+    }
+}
+
+void computeAccels2()
+{
+    int i = 0;
+	int j = 0;
+	double denom = 0.;
+
+	vec vec_pose_diff = {0};
+	vec vec_without_mass = {0};
+	vec vec_acc_i = {0};
+	vec vec_acc_j = {0};
+	vec vec_acc_ij = {0};
+	vec vec_acc_ji = {0};
+
+    for (i = bodies / 2; i < bodies; i++) {
+
+
+		vec_acc_i = accels[i];
+
+
+        for (j = i + 1; j < bodies; j++) {
+
+			vec_pose_diff = subVecs(poses[j], poses[i]);
+
+			denom = pow(modVec(vec_pose_diff), 3);
+			if (denom < eps){
+				denom = eps;
+			}
+
+			vec_without_mass = scaleVec(GravConst / denom, vec_pose_diff);
+
+
+			vec_acc_j = accels[j];
+
+
+			vec_acc_ij = scaleVec(masses[j], vec_without_mass);
+			vec_acc_ji = scaleVec(-masses[i], vec_without_mass);
+			vec_acc_i = addVecs(vec_acc_i, vec_acc_ij);
+			vec_acc_j = addVecs(vec_acc_j, vec_acc_ji);
+
+
+			accels[j] = vec_acc_j;
+
+        }
+
+		accels[i] = vec_acc_i;
+
+    }
+}
+
+void computeVels()
+{
+    int i = 0;
+    for (i = 0; i < bodies; i++) {
+        vels[i] = addVecs(vels[i], scaleVec(DT, accels[i]));
+	}
 }
 
 void computePoses()
 {
-    int i;
-
-    for (i = 0; i < bodies; i++)
-        poses[i] = addVecs(poses[i], scaleVec(DT,velocities[i]));
-}
-
-void simulate()
-{
-    computeAccelerations();
-    computePoses();
-    computeVelocities();
-}
-
-int main()
-{
-	initiateSystem(
-		"input/input-10-10",
-		"output/output-serial-10-10");
-
-	fprintf(fOut, "t\t");
-	for (int j = 1; j < bodies + 1; ++j){
-		fprintf(fOut, "x%d\ty%d\t", j, j);
+    int i = 0;
+    for (i = 0; i < bodies; i++) {
+        poses[i] = addVecs(poses[i], scaleVec(DT,vels[i]));
 	}
-	fprintf(fOut, "\n");
+}
 
-	for (int i = 0; i < timeSteps; i++)
-	{          
-		simulate();
+
+
+
+
+
+
+
+void* routine()
+{
+	int i = 0;
+	int j = 0;
+
+	for (i = 0; i < timeSteps; i++) {
+		
+		for (j = 0; j < bodies; j++) {
+			accels[j] = vecEmpty;
+		}
+
+		computeAccels1();
+		computeAccels2();
+		/* computeAccels(); */
+		computePoses();
+		computeVels();
 		fprintf(fOut, "%d\t", i + 1);
-		for (int j = 0; j < bodies; j++){
+		for (j = 0; j < bodies; j++) {
 			fprintf(fOut, "%.20f\t%.20f\t", poses[j].x, poses[j].y);
 		}
 		fprintf(fOut, "\n");
 	}
-	fclose(fOut);
-	printf("bodies=%d, timeSteps=%d\n", bodies, timeSteps);
+	return NULL
+}
 
+int main()
+{
+	rslt = initiateSystem(
+		"input/input-10-10",
+		"output/output-serial-10-10");
+	if (rslt != 0) { return 1; }
+
+	routine();
+
+	fclose(fOut);
     free(masses);
-    free(accelerations);
-    free(velocities);
+    free(accels);
+    free(vels);
     free(poses);
     return 0;
 }

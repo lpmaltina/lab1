@@ -48,41 +48,56 @@ double modVec(struct vec a)
 int bodies = 0;
 int timeSteps = 0;
 double* masses = NULL;
-double GravConstant = 0.;
+double GravConst = 0.;
 
-FILE *fIn = NULL;
 FILE *fOut = NULL;
 
+int rslt = 0;
+
+struct vec *accels = NULL;
 struct vec *poses = NULL;
-struct vec *velocities = NULL;
-struct vec *accelerations = NULL;
+struct vec *vels = NULL;
 
 
 int initiateSystem(char *str_fIn, char *str_fOut)
 {
-    int i;
-    FILE *fp = fopen(str_fIn, "r");
-    fscanf(fp, "%lf%d%d", &GravConstant, &bodies, &timeSteps);
+	int i = 0;
+	int j = 0;
+	FILE *fIn = NULL;
+
+    fIn = fopen(str_fIn, "r");
+	if (fIn == NULL) {
+		printf("err: cannot open input file\n");
+		return 1;
+	}
+    fscanf(fIn, "%lf%d%d", &GravConst, &bodies, &timeSteps);
 
     masses = (double *)malloc(bodies * sizeof(double));
+    accels = (struct vec *)malloc(bodies * sizeof(struct vec));
     poses = (struct vec *)malloc(bodies * sizeof(struct vec));
-    velocities = (struct vec *)malloc(bodies * sizeof(struct vec));
-    accelerations = (struct vec *)malloc(bodies * sizeof(struct vec));
+    vels = (struct vec *)malloc(bodies * sizeof(struct vec));
 
     for (i = 0; i < bodies; i++)
     {
-        fscanf(fp, "%lf", &masses[i]);
-        fscanf(fp, "%lf%lf", &poses[i].x, &poses[i].y);
-        fscanf(fp, "%lf%lf", &velocities[i].x, &velocities[i].y);
+        fscanf(fIn, "%lf", &masses[i]);
+        fscanf(fIn, "%lf%lf", &poses[i].x, &poses[i].y);
+        fscanf(fIn, "%lf%lf", &vels[i].x, &vels[i].y);
     }
 
-    fclose(fp);
+    fclose(fIn);
 
 	fOut = fopen(str_fOut, "w+");
 	if (fOut == NULL) {
-		printf("err: cannot open destination file\n");
+		printf("err: cannot open output file\n");
 		return 1;
 	}
+
+    fprintf(fOut, "t\t");
+    for (j = 1; j < bodies + 1; ++j){
+        fprintf(fOut, "x%d\ty%d\t", j, j);
+    }
+    fprintf(fOut, "\n");
+
 	return 0;
 }
 
