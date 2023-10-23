@@ -38,8 +38,8 @@ void generateInput(int bodies, int timeSteps){
 
 int main(){
     srand(time(NULL));
-    for (int bodies = 10; bodies <= 1000; bodies = bodies * 10){
-        for (int timeSteps = 10; timeSteps <= 1000; timeSteps = timeSteps * 10){
+    for (int bodies = 64; bodies <= 1024; bodies *= 2){
+        for (int timeSteps = 10; timeSteps <= 1000; timeSteps *= 10){
             generateInput(bodies, timeSteps);
         }
     }

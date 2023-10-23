@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <pthread.h>
+#include "timer.h"
 
 #define DT 0.05
 #define eps 0.00000001
@@ -12,46 +13,20 @@ typedef struct
 } vector;
 
 pthread_barrier_t barrier;
-int thread_count = 5;
-pthread_mutex_t mutex, barrier_mutex;
+int thread_count;
 FILE* outputFile;
+double computationsTime;
+double writingStart;
+double writingEnd;
 int bodies, timeSteps;
 double *masses, GravConstant;
 vector *positions, *velocities, *accelerations;
 vector *next_positions, *next_velocities;
-pthread_cond_t cond_var;
-int counter = 0;
-
-
-// void* barrier(void* rank)
-// {
-
-//     pthread_cond_init(&cond_var, NULL);
-//     pthread_mutex_init(&barrier_mutex, NULL);
-
-//     pthread_mutex_lock(&barrier_mutex);
-//     counter++;
-//     if(counter == thread_count)
-//     {
-//         counter = 0;
-//         pthread_cond_broadcast(&cond_var);
-//     }
-//     else
-//     {
-//         while(pthread_cond_wait(&cond_var, &barrier_mutex) != 0);
-//     }
-//     pthread_mutex_unlock(&barrier_mutex);
-
-//     pthread_cond_destroy(&cond_var);
-//     pthread_mutex_destroy(&barrier_mutex);
-// }
 
 
 vector addVectors(vector a, vector b)
 {
     vector c = {a.x + b.x, a.y + b.y};
-
-
     return c;
 }
 
@@ -59,8 +34,6 @@ vector addVectors(vector a, vector b)
 vector scaleVector(double b, vector a)
 {
     vector c = {b * a.x, b * a.y};
-
-
     return c;
 }
 
@@ -68,8 +41,6 @@ vector scaleVector(double b, vector a)
 vector subtractVectors(vector a, vector b)
 {
     vector c = {a.x - b.x, a.y - b.y};
-
-
     return c;
 }
 
@@ -169,11 +140,14 @@ void* routine(void* nthread){
         updateArrays(my_first_point, my_last_point);
         pthread_barrier_wait(&barrier);
         if (my_nthread == 0){
+            GET_TIME(writingStart);
             fprintf(outputFile, "%d\t", i + 1);
             for (int j = 0; j < bodies; j++){
                 fprintf(outputFile, "%f\t%f\t", positions[j].x, positions[j].y);
             }
             fprintf(outputFile, "\n");
+            GET_TIME(writingEnd);
+            computationsTime -= writingEnd - writingStart;
         }
         pthread_barrier_wait(&barrier);
     }
@@ -181,32 +155,53 @@ void* routine(void* nthread){
 }
 
 
-int main()
+int main(int argc, char** argv)
 {
     int i, j;
-    int timeStep = 0;
-    initiateSystem("input/input-10-1000");
-    outputFile = fopen("output/output-parallel-10-1000", "a");
-    fprintf(outputFile, "t\t");
-    for (j = 1; j < bodies + 1; ++j){
-        fprintf(outputFile, "x%d\ty%d\t", j, j);
-    }
-    fprintf(outputFile, "\n");
-    
-    pthread_barrier_init(&barrier, NULL, thread_count);
+    double start, end;
+    int bodies, timeSteps;
+    char inputFileName[30] = {0};
+    char outputFileName[30] = {0};
+    char timingsFileName[] = "timings";
+    FILE* timingsFile = fopen(timingsFileName, "w+");
+    fprintf(timingsFile, "threads\tbodies\ttimeSteps\ttime\n");
+    for (thread_count = 1; thread_count <= 8; thread_count *= 2){
+        for (bodies = 64; bodies <= 1024; bodies *= 2){
+            for (timeSteps = 10; timeSteps <= 1000; timeSteps *= 10){
+                computationsTime = 0;
+                sprintf(inputFileName, "input/input-%d-%d", bodies, timeSteps);
+                initiateSystem(inputFileName);
+                sprintf(outputFileName, "output/output-parallel-%d-%d-%d", thread_count, bodies, timeSteps);
+                outputFile = fopen(outputFileName, "w+");
+                for (j = 1; j < bodies + 1; ++j){
+                    fprintf(outputFile, "x%d\ty%d\t", j, j);
+                }
+                fprintf(outputFile, "\n");
+                
+                GET_TIME(start);
+                pthread_barrier_init(&barrier, NULL, thread_count);
 
-    pthread_t* pthread_handles = malloc(thread_count * sizeof(pthread_t));
-    for (long long i = 0; i < thread_count; ++i){
-        pthread_create(&pthread_handles[i], NULL, routine, (void*) i);
-    }
+                pthread_t* pthread_handles = malloc(thread_count * sizeof(pthread_t));
+                for (long long i = 0; i < thread_count; ++i){
+                    pthread_create(&pthread_handles[i], NULL, routine, (void*) i);
+                }
 
-    for (long long i = 0; i < thread_count; ++i){
-        pthread_join(pthread_handles[i], NULL);
+                for (long long i = 0; i < thread_count; ++i){
+                    pthread_join(pthread_handles[i], NULL);
+                }
+                free(pthread_handles);
+                
+                pthread_barrier_destroy(&barrier);
+                GET_TIME(end);
+                computationsTime += end - start;
+                printf("threads=%d, bodies=%d, timeSteps=%d\n", thread_count, bodies, timeSteps);
+                fprintf(timingsFile, "%d\t%d\t%d\t%f\n", thread_count, bodies, timeSteps, computationsTime);
+                
+            }
+            fclose(outputFile);
+        }
     }
-    free(pthread_handles);
-    
-    pthread_barrier_destroy(&barrier);
-    fclose(outputFile);
+    fclose(timingsFile);
     free(masses);
     free(accelerations);
     free(velocities);

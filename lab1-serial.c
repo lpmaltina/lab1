@@ -13,6 +13,8 @@ typedef struct
 
 double start = 0;
 double end = 0;
+double writingStart = 0;
+double writingEnd = 0;
 int bodies, timeSteps;
 double *masses, GravConstant;
 vector *positions, *velocities, *accelerations;
@@ -124,31 +126,34 @@ int main()
     int bodies, timeSteps;
     char inputFile[30] = {0};
     char outputFile[30] = {0};
-    for (bodies = 10; bodies <= 1000; bodies = bodies * 10){
-        for (timeSteps = 10; timeSteps <= 1000; timeSteps = timeSteps * 10){
+    for (bodies = 64; bodies <= 1024; bodies *= 2){
+        for (timeSteps = 10; timeSteps <= 1000; timeSteps *= 10){
             time = 0;
             sprintf(inputFile, "input/input-%d-%d", bodies, timeSteps);
             initiateSystem(inputFile);
             sprintf(outputFile, "output/output-serial-%d-%d", bodies, timeSteps);
-            FILE *f = fopen(outputFile, "a");
+            FILE *f = fopen(outputFile, "w+");
             fprintf(f, "t\t");
             for (j = 1; j < bodies + 1; ++j){
                 fprintf(f, "x%d\ty%d\t", j, j);
             }
             fprintf(f, "\n");
-
+            
+            GET_TIME(start);
             for (i = 0; i < timeSteps; i++)
             {
-                GET_TIME(start);
                 simulate();
-                GET_TIME(end);
+                GET_TIME(writingStart);
                 time += end - start;
                 fprintf(f, "%d\t", i + 1);
                 for (j = 0; j < bodies; j++){
                     fprintf(f, "%f\t%f\t", positions[j].x, positions[j].y);
                 }
                 fprintf(f, "\n");
+                GET_TIME(writingEnd);
             }
+            GET_TIME(end);
+            time = end - start + (writingEnd - writingStart);
             fclose(f);
             printf("bodies=%d, timeSteps=%d: %f\n", bodies, timeSteps, time);
         }
