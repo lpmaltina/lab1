@@ -5,18 +5,15 @@
 
 int thread_count = 2;
 
-pthread_mutex_t mutex = {0};
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_barrier_t barrier = {0};
 
-struct vec* nxt_poses = NULL;
-struct vec* nxt_vels = NULL;
 
-
-void computeAccels(int bgg, int end)
+void computeAccels(int bgg, int end, int nth)
 {
     int i = 0;
 	int j = 0;
-	double denom = 0.;
+	long double denom = 0.;
 
 	vec vec_pose_diff = {0};
 	vec vec_without_mass = {0};
@@ -25,56 +22,30 @@ void computeAccels(int bgg, int end)
 	vec vec_acc_ij = {0};
 	vec vec_acc_ji = {0};
 
+	pthread_mutex_lock(&mutex);
+
     for (i = bgg; i < end; i++) {
-
-		
 		vec_acc_i = accels[i];
-
-
         for (j = i + 1; j < bodies; j++) {
-
 			vec_pose_diff = subVecs(poses[j], poses[i]);
-
 			denom = pow(modVec(vec_pose_diff), 3);
-			if (denom < eps){
-				denom = eps;
-			}
-
+			/* if (denom < eps){ */
+				/* denom = eps; */
+			/* } */
 			vec_without_mass = scaleVec(GravConst / denom, vec_pose_diff);
-
-
 			vec_acc_j = accels[j];
-
-
 			vec_acc_ij = scaleVec(masses[j], vec_without_mass);
 			vec_acc_ji = scaleVec(-masses[i], vec_without_mass);
 			vec_acc_i = addVecs(vec_acc_i, vec_acc_ij);
 			vec_acc_j = addVecs(vec_acc_j, vec_acc_ji);
-
-
 			accels[j] = vec_acc_j;
 
+			putchar(nth + 48);
         }
-
 		accels[i] = vec_acc_i;
-
     }
-}
 
-void computeVels()
-{
-    int i = 0;
-    for (i = 0; i < bodies; i++) {
-        vels[i] = addVecs(vels[i], scaleVec(DT, accels[i]));
-	}
-}
-
-void computePoses()
-{
-    int i = 0;
-    for (i = 0; i < bodies; i++) {
-        poses[i] = addVecs(poses[i], scaleVec(DT,vels[i]));
-	}
+	pthread_mutex_unlock(&mutex);
 }
 
 void* routine(void* arg)
@@ -92,30 +63,12 @@ void* routine(void* arg)
 			accels[j] = vecEmpty;
 		}
 
-		pthread_mutex_lock(&mutex);
-		computeAccels(bgg, end);
-		/* for (j = 0; j < timeSteps * 10; j++) { */
-			/* printf("%i", nth, i); */
-		/* } */
-		/* printf("\n"); */
-		pthread_mutex_unlock(&mutex);
+		computeAccels(bgg, end, nth);
 
 		pthread_barrier_wait(&barrier);
-
-/* 		computeAccels(); */
-/* 		computePoses(); */
-/* 		computeVels(); */
-		if (nth == 0) {
-			fprintf(fOut, "%d\t", i + 1);
-			for (j = 0; j < bodies; j++) {
-				fprintf(fOut, "%.20f\t%.20f\t", accels[j].x, accels[j].y);
-			}
-			fprintf(fOut, "\n");
-		}
-/* 		fprintf(fOut, "\n"); */
 	}
 
-	return NULL;
+	pthread_exit(NULL);
 }
 
 int main()
@@ -125,10 +78,6 @@ int main()
 		"output/output-parallel-ku-10-10");
 	if (rslt != 0) { return 1; }
 
-	nxt_poses = calloc(bodies, sizeof(struct vec));
-	nxt_vels = calloc(bodies, sizeof(struct vec));
-
-	pthread_mutex_init(&mutex, NULL);
 	pthread_barrier_init(&barrier, NULL, thread_count);
 
 	pthread_t* pthread_handlers = calloc(thread_count, sizeof(pthread_t));
@@ -140,10 +89,14 @@ int main()
 	}
 	free(pthread_handlers);
 
-	fclose(fOut);
-    free(masses);
-    free(accels);
-    free(vels);
-    free(poses);
+	printf("\n");
+	fprintf(fOut, "1\t");
+	for (int i = 0; i < bodies; i++) {
+		fprintf(fOut, "%.20Lf\t%.20Lf\t", accels[i].x, accels[i].y);
+	}
+	fprintf(fOut, "\n");
+
+	terminateSystem();
+
     return 0;
 }
