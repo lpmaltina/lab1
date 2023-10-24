@@ -1,166 +1,125 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
+/* Последовательная программа.
+Читает входные данные из директории input.
+Сохраняет координаты точек в течение указанного количества временных шагов
+в директорию output */
+#include "file-utils.h"
 #include "timer.h"
+#include "vec.h"
 
 #define DT 0.05
-#define eps 0.00000001
+#define EPS 0.00000001
+#define G 6.6743e-11
 
-typedef struct
-{
-    double x, y;
-} vector;
-
-double start = 0;
-double end = 0;
-double writingStart = 0;
-double writingEnd = 0;
-int bodies, timeSteps;
-double *masses, GravConstant;
-vector *positions, *velocities, *accelerations;
-
-vector addVectors(vector a, vector b)
-{
-    vector c = {a.x + b.x, a.y + b.y};
-
-    return c;
-}
-
-vector scaleVector(double b, vector a)
-{
-    vector c = {b * a.x, b * a.y};
-
-    return c;
-}
-
-vector subtractVectors(vector a, vector b)
-{
-    vector c = {a.x - b.x, a.y - b.y};
-
-    return c;
-}
-
-double mod(vector a)
-{
-    return sqrt(a.x * a.x + a.y * a.y);
-}
-
-int isCollision(vector point1, vector point2){
-    return (
-        fabs(point1.x - point2.x) < eps && 
-        fabs(point1.y - point2.y) < eps
-    );
-}
-
-void initiateSystem(char *fileName)
-{
-    int i;
-    FILE *fp = fopen(fileName, "r");
-
-    fscanf(fp, "%lf%d%d", &GravConstant, &bodies, &timeSteps);
-
-    masses = (double *)malloc(bodies * sizeof(double));
-    positions = (vector *)malloc(bodies * sizeof(vector));
-    velocities = (vector *)malloc(bodies * sizeof(vector));
-    accelerations = (vector *)malloc(bodies * sizeof(vector));
-
-    for (i = 0; i < bodies; i++)
-    {
-        fscanf(fp, "%lf", &masses[i]);
-        fscanf(fp, "%lf%lf", &positions[i].x, &positions[i].y);
-        fscanf(fp, "%lf%lf", &velocities[i].x, &velocities[i].y);
-    }
-
-    fclose(fp);
-}
-
-void computeAccelerations()
-{
+/* Функция для вычисления ускорений.
+Обновляет глобальный массив accelerations. */
+void computeAccelerations(){
     int i, j;
-
-    for (i = 0; i < bodies; i++)
-    {
+    double denominator;
+    
+    for (i = 0; i < bodies; ++i){
         accelerations[i].x = 0;
         accelerations[i].y = 0;
-        for (j = 0; j < bodies; j++)
-        {
-            if (i != j)
-            {
-                double denominator = pow(mod(subtractVectors(positions[i], positions[j])), 3);
-                if (denominator < eps){
-                    denominator = eps;
+        for (j = 0; j < bodies; ++j){
+            if (i != j){
+                denominator = pow(
+                    modVector(subtractVectors(positions[i], positions[j])), 3
+                );
+                if (denominator < EPS){
+                    denominator = EPS;
                 }
-                accelerations[i] = addVectors(accelerations[i], scaleVector(GravConstant * masses[j] / denominator, subtractVectors(positions[j], positions[i])));
+                accelerations[i] = addVectors(
+                    accelerations[i],
+                    scaleVector(
+                        G * masses[j] / denominator,
+                        subtractVectors(positions[j], positions[i])
+                    )
+                );
             }
         }
     }
 }
 
-void computeVelocities()
-{
+/* Функция для вычисления скоростей.
+Обновляет глобальный массив velocities. */
+void computeVelocities(){
     int i;
-
-    for (i = 0; i < bodies; i++)
-        velocities[i] = addVectors(velocities[i], scaleVector(DT, accelerations[i]));
+    for (i = 0; i < bodies; ++i){
+        velocities[i] = addVectors(
+            velocities[i],
+            scaleVector(DT, accelerations[i])
+        );
+    }
 }
 
-void computePositions()
-{
+/* Функция для вычисления координат точек.
+Обновляет глобальный массив positions. */
+void computePositions(){
     int i;
-
-    for (i = 0; i < bodies; i++)
-        positions[i] = addVectors(positions[i], scaleVector(DT,velocities[i]));
+    for (i = 0; i < bodies; ++i){
+        positions[i] = addVectors(
+            positions[i],
+            scaleVector(DT, velocities[i])
+        );
+    }
 }
 
-void simulate()
-{
+/* Функция, которая выполняет вычисления для одного временного шага. */
+void simulate(){
     computeAccelerations();
     computePositions();
     computeVelocities();
 }
 
-int main()
-{
-    int i, j;
+/* Функция, которая сохраняет координаты точек
+в течение указанного количества временных шагов в директорию output.
+
+Формат имени файла с результатами:
+output-serial-<количество точек>-<количество временных шагов>.csv.
+
+Рассматриваемое количество точек: 64, 128, 256, 512, 1024.
+Рассматриваемое количество временных шагов: 10, 100, 1000. */
+int main(){
+    int timeStep;
+    int timeSteps;
+    char inputFileName[30] = {0};
+    char outputFileName[30] = {0};
+    FILE *outputFile;
     double time;
-    int bodies, timeSteps;
-    char inputFile[30] = {0};
-    char outputFile[30] = {0};
+    double start, end;
+    double writingStart, writingEnd;
+
     for (bodies = 64; bodies <= 1024; bodies *= 2){
+        sprintf(inputFileName, "input/input-%d.txt", bodies);
         for (timeSteps = 10; timeSteps <= 1000; timeSteps *= 10){
-            time = 0;
-            sprintf(inputFile, "input/input-%d-%d", bodies, timeSteps);
-            initiateSystem(inputFile);
-            sprintf(outputFile, "output/output-serial-%d-%d", bodies, timeSteps);
-            FILE *f = fopen(outputFile, "w+");
-            fprintf(f, "t\t");
-            for (j = 1; j < bodies + 1; ++j){
-                fprintf(f, "x%d\ty%d\t", j, j);
-            }
-            fprintf(f, "\n");
+            initiateSystem(inputFileName);
+            sprintf(
+                outputFileName,
+                "output/output-serial-%d-%d.csv",
+                bodies,
+                timeSteps
+            );
+            outputFile = fopen(outputFileName, "w+");
+            writeHeader(outputFile);
             
+            time = 0;
             GET_TIME(start);
-            for (i = 0; i < timeSteps; i++)
-            {
+            for (timeStep = 1; timeStep < timeSteps + 1; ++timeStep){
                 simulate();
                 GET_TIME(writingStart);
-                time += end - start;
-                fprintf(f, "%d\t", i + 1);
-                for (j = 0; j < bodies; j++){
-                    fprintf(f, "%f\t%f\t", positions[j].x, positions[j].y);
-                }
-                fprintf(f, "\n");
+                writeTimeStepInfo(outputFile, timeStep);
                 GET_TIME(writingEnd);
+                time -= writingEnd - writingStart;
             }
             GET_TIME(end);
-            time = end - start + (writingEnd - writingStart);
-            fclose(f);
+            time += end - start;
+
+            fclose(outputFile);
             printf("bodies=%d, timeSteps=%d: %f\n", bodies, timeSteps, time);
+            free(masses);
+            free(accelerations);
+            free(velocities);
+            free(positions);
         }
     }
-    free(masses);
-    free(accelerations);
-    free(velocities);
-    free(positions);
     return 0;
 }
