@@ -3,15 +3,14 @@
 #include "universal.h"
 
 
-int thread_count = 5;
+int thread_count = 2;
+
+pthread_mutex_t mutex = {0};
 pthread_barrier_t barrier = {0};
-pthread_mutex_t mutex, barrier_mutex = {0};
-pthread_cond_t cond_var = {0};
 pthread_rwlock_t rwlock = {0}; /* used in computeAccels */
 
-
-vec *next_poses = NULL, *next_vels = NULL;
-int counter = 0;
+vec *nxt_poses = NULL;
+vec *nxt_vels = NULL;
 
 
 void computeAccels(int start, int finish)
@@ -67,7 +66,7 @@ void computeVels(int start, int finish)
 {
     int i = 0;
     for (i = start; i < finish; i++) {
-        next_vels[i] = addVecs(vels[i], scaleVec(DT, accels[i]));
+        nxt_vels[i] = addVecs(vels[i], scaleVec(DT, accels[i]));
 	}
 }
 
@@ -75,15 +74,15 @@ void computePoses(int start, int finish)
 {
     int i = 0;
     for (i = start; i < finish; i++) {
-        next_poses[i] = addVecs(poses[i], scaleVec(DT, vels[i]));
+        nxt_poses[i] = addVecs(poses[i], scaleVec(DT, vels[i]));
 	}
 }
 
 void updateArrays(int start, int finish)
 {
     for (int i = start; i < finish; ++i){
-        poses[i] = next_poses[i];
-        vels[i] = next_vels[i];
+        poses[i] = nxt_poses[i];
+        vels[i] = nxt_vels[i];
     }
 }
 
@@ -96,7 +95,9 @@ void* routine(void* nthread)
     int my_points = bodies / thread_count;
     int my_first_point = my_nthread * my_points;
     int my_last_point = my_first_point + my_points;
-    
+
+	printf("my  first  point's  x:  %f\n", poses[my_first_point].x);
+
      for (i = 0; i < timeSteps; ++i) {
 
 		pthread_mutex_lock(&mutex);
@@ -113,12 +114,15 @@ void* routine(void* nthread)
 
         pthread_barrier_wait(&barrier);
         updateArrays(my_first_point, my_last_point);
+		if (my_nthread == 0) {
+			printf("my first point's x now: %i %f\n", i, poses[my_first_point].x);
+		}
         pthread_barrier_wait(&barrier);
 
         if (my_nthread == 0){
             fprintf(fOut, "%d\t", i + 1);
             for (j = 0; j < bodies; j++){
-                fprintf(fOut, "%.20f\t%.20f\t", accels[j].x, accels[j].y);
+                fprintf(fOut, "%.20f\t%.20f\t", poses[j].x, poses[j].y);
             }
             fprintf(fOut, "\n");
         }
@@ -134,21 +138,23 @@ int main()
 		"output/output-parallel-10-10");
 	if (rslt != 0) { return 1; }
 
-    next_poses = (vec *)malloc(bodies * sizeof(vec));
-    next_vels = (vec *)malloc(bodies * sizeof(vec));
+    nxt_poses = calloc(bodies, sizeof(struct vec));
+    nxt_vels = calloc(bodies, sizeof(struct vec));
     
     pthread_barrier_init(&barrier, NULL, thread_count);
 
+	pthread_mutex_init(&mutex, NULL);
+
 	pthread_rwlock_init(&rwlock, NULL);
-    pthread_t* pthread_handles = malloc(thread_count * sizeof(pthread_t));
+    pthread_t* pthread_handlers = calloc(thread_count, sizeof(pthread_t));
     for (long long i = 0; i < thread_count; ++i){
-        pthread_create(&pthread_handles[i], NULL, routine, (void*) i);
+        pthread_create(&pthread_handlers[i], NULL, routine, (void*) i);
     }
 
     for (long long i = 0; i < thread_count; ++i){
-        pthread_join(pthread_handles[i], NULL);
+        pthread_join(pthread_handlers[i], NULL);
     }
-    free(pthread_handles);
+    free(pthread_handlers);
 	pthread_rwlock_destroy(&rwlock);
 
     pthread_barrier_destroy(&barrier);
@@ -157,7 +163,7 @@ int main()
     free(accels);
     free(vels);
     free(poses);
-    free(next_poses);
-    free(next_vels);
+    free(nxt_poses);
+    free(nxt_vels);
     return 0;
 }

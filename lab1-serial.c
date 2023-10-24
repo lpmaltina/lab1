@@ -189,11 +189,11 @@ void* routine()
 		computeVels();
 		fprintf(fOut, "%d\t", i + 1);
 		for (j = 0; j < bodies; j++) {
-			fprintf(fOut, "%.20f\t%.20f\t", poses[j].x, poses[j].y);
+			fprintf(fOut, "%.20f\t%.20f\t", accels[j].x, accels[j].y);
 		}
 		fprintf(fOut, "\n");
 	}
-	return NULL
+	return NULL;
 }
 
 int main()
