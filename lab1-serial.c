@@ -5,7 +5,7 @@ void computeAccels()
 {
     int i = 0;
 	int j = 0;
-	long double denom = 0.;
+	double denom = 0.;
 
 	vec vec_pose_diff = {0};
 	vec vec_without_mass = {0};
@@ -19,9 +19,9 @@ void computeAccels()
         for (j = i + 1; j < bodies; j++) {
 			vec_pose_diff = subVecs(poses[j], poses[i]);
 			denom = pow(modVec(vec_pose_diff), 3);
-			if (denom < eps){
-				denom = eps;
-			}
+			/* if (denom < eps){ */
+				/* denom = eps; */
+			/* } */
 			vec_without_mass = scaleVec(GravConst / denom, vec_pose_diff);
 			vec_acc_j = accels[j];
 			vec_acc_ij = scaleVec(masses[j], vec_without_mass);
@@ -48,7 +48,7 @@ void* routine()
 		computeAccels();
 		fprintf(fOut, "%d\t", i + 1);
 		for (j = 0; j < bodies; j++) {
-			fprintf(fOut, "%.20Lf\t%.20Lf\t", accels[j].x, accels[j].y);
+			fprintf(fOut, "%.20lf\t%.20lf\t", accels[j].x, accels[j].y);
 		}
 		fprintf(fOut, "\n");
 	}

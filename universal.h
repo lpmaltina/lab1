@@ -12,8 +12,8 @@
 
 
 struct vec {
-	long double x;
-	long double y;
+	double x;
+	double y;
 };
 const struct vec vecEmpty = {0};
 
@@ -30,13 +30,13 @@ struct vec subVecs(struct vec a, struct vec b)
 	return c;
 }
 
-struct vec scaleVec(long double b, struct vec a)
+struct vec scaleVec(double b, struct vec a)
 {
 	struct vec c = { a.x * b, a.y * b };
 	return c;
 }
 
-long double modVec(struct vec a)
+double modVec(struct vec a)
 {
 	return sqrt(a.x * a.x + a.y * a.y);
 }
@@ -44,8 +44,8 @@ long double modVec(struct vec a)
 
 int bodies = 0;
 int timeSteps = 0;
-long double* masses = NULL;
-long double GravConst = 0.;
+double* masses = NULL;
+double GravConst = 0.;
 
 FILE *fOut = NULL;
 
@@ -67,18 +67,18 @@ int initiateSystem(char *str_fIn, char *str_fOut)
 		printf("err: cannot open input file\n");
 		return 1;
 	}
-    fscanf(fIn, "%Lf%d%d", &GravConst, &bodies, &timeSteps);
+    fscanf(fIn, "%lf%d%d", &GravConst, &bodies, &timeSteps);
 
-    masses = (long double *)malloc(bodies * sizeof(long double));
-    accels = (struct vec *)malloc(bodies * sizeof(struct vec));
-    poses = (struct vec *)malloc(bodies * sizeof(struct vec));
-    vels = (struct vec *)malloc(bodies * sizeof(struct vec));
+    masses = calloc(bodies, sizeof(double));
+    accels = calloc(bodies, sizeof(struct vec));
+    poses = calloc(bodies, sizeof(struct vec));
+    vels = calloc(bodies, sizeof(struct vec));
 
     for (i = 0; i < bodies; i++)
     {
-        fscanf(fIn, "%Lf", &masses[i]);
-        fscanf(fIn, "%Lf%Lf", &poses[i].x, &poses[i].y);
-        fscanf(fIn, "%Lf%Lf", &vels[i].x, &vels[i].y);
+        fscanf(fIn, "%lf", &masses[i]);
+        fscanf(fIn, "%lf%lf", &poses[i].x, &poses[i].y);
+        fscanf(fIn, "%lf%lf", &vels[i].x, &vels[i].y);
     }
 
     fclose(fIn);

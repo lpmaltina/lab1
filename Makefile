@@ -1,5 +1,5 @@
 CC:=gcc
-CFLAGS:=-g -Wall -Wextra -pedantic -O0
+CFLAGS:=-g -Wall -Wextra -pedantic -O0 -Wno-unused-variable
 
 
 all: generate-input.run lab1-parallel.run lab1-serial.run lab1-parallel-ku.run
