@@ -23,39 +23,30 @@
 ### Компиляция и запуск кода
 **1) generate-input.c**:
 ```console
-lyudmila@LAPTOP-7V39O4LI:~/lab1$ gcc generate-input -o generate-input
-```
-
-```console
-lyudmila@LAPTOP-7V39O4LI:~/lab1$./generate-input
+$ gcc generate-input -o generate-input
+$ ./generate-input
 ```
 
 **2) lab1-serial.c**
 ```console
-lyudmila@LAPTOP-7V39O4LI:~/lab1$ gcc lab1-serial.c file-utils.c vec.c -o lab1-serial -lm
-```
-
-```console
-lyudmila@LAPTOP-7V39O4LI:~/lab1$ ./lab1-serial
+$ gcc lab1-serial.c file-utils.c vec.c -o lab1-serial -lm
+$ ./lab1-serial
 ```
 
 **3) lab1-parallel.c**
 ```console
-lyudmila@LAPTOP-7V39O4LI:~/lab1$ gcc lab1-parallel.c file-utils.c vec.c -o lab1-parallel -lpthread -lm
-```
-
-```console
-lyudmila@LAPTOP-7V39O4LI:~/lab1$ ./lab1-parallel
+$ gcc lab1-parallel.c file-utils.c vec.c -o lab1-parallel -lpthread -lm
+$ ./lab1-parallel
 ```
 
 **4) visualization.py**
 ```console
-lyudmila@LAPTOP-7V39O4LI:~/lab1$ python3 visualization.py
+$ python3 visualization.py
 ```
 
 **5) create-plots.py**
 ```console
-lyudmila@LAPTOP-7V39O4LI:~/lab1$ python3 create-plots.py
+$ python3 create-plots.py
 ```
 
 ### Информация о системе
@@ -64,8 +55,8 @@ lyudmila@LAPTOP-7V39O4LI:~/lab1$ python3 create-plots.py
     Logical processors: 8
 
 ### Результаты
-![speedup](https://github.com/lpmaltina/lab1/blob/parallelization/plots/speedup.png)
+![speedup](https://github.com/lpmaltina/lab1/blob/main/plots/speedup.png)
 
 
-![efficiency](https://github.com/lpmaltina/lab1/blob/parallelization/plots/efficiency.png)
+![efficiency](https://github.com/lpmaltina/lab1/blob/main/plots/efficiency.png)
 

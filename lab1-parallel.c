@@ -11,7 +11,6 @@ pthread_barrier_t barrier;
 int threadCount;
 FILE* outputFile;
 double computationsTime;
-double writingStart, writingEnd;
 int timeSteps;
 vec *nextPositions, *nextVelocities;
 
@@ -120,13 +119,9 @@ void* routine(void* nthread){
         pthread_barrier_wait(&barrier);
         updateArrays(myFirstPoint, myLastPoint);
         pthread_barrier_wait(&barrier);
-        if (myNthread == 0){
-            GET_TIME(writingStart);
-            writeTimeStepInfo(outputFile, timeStep);
-            GET_TIME(writingEnd);
-            computationsTime -= writingEnd - writingStart;
-        }
-        pthread_barrier_wait(&barrier);
+        // if (myNthread == 0){
+        //     writeTimeStepInfo(outputFile, timeStep);
+        // }
     }
     return NULL;
 }
@@ -156,20 +151,24 @@ int main(){
 
     for (threadCount = 1; threadCount <= 8; threadCount *= 2){
         for (bodies = 64; bodies <= 1024; bodies *= 2){
+            masses = (double *)malloc(bodies * sizeof(double));
+            positions = (vec *)malloc(bodies * sizeof(vec));
+            velocities = (vec *)malloc(bodies * sizeof(vec));
+            accelerations = (vec *)malloc(bodies * sizeof(vec));
             nextPositions = (vec *)malloc(bodies * sizeof(vec));
             nextVelocities = (vec *)malloc(bodies * sizeof(vec));
             sprintf(inputFileName, "input/input-%d.txt", bodies);
             for (timeSteps = 10; timeSteps <= 1000; timeSteps *= 10){
                 initiateSystem(inputFileName);
-                sprintf(
-                    outputFileName,
-                    "output/output-parallel-%d-%d-%d.csv",
-                    threadCount,
-                    bodies,
-                    timeSteps
-                );
-                outputFile = fopen(outputFileName, "w+");
-                writeHeader(outputFile);
+                // sprintf(
+                //     outputFileName,
+                //     "output/output-parallel-%d-%d-%d.csv",
+                //     threadCount,
+                //     bodies,
+                //     timeSteps
+                // );
+                // outputFile = fopen(outputFileName, "w+");
+                // writeHeader(outputFile);
 
                 computationsTime = 0;
                 
@@ -210,12 +209,12 @@ int main(){
                     DELIMITER,
                     computationsTime
                 );
-                fclose(outputFile);
-                free(masses);
-                free(accelerations);
-                free(velocities);
-                free(positions);
-            }  
+                // fclose(outputFile);
+            }
+            free(masses);
+            free(accelerations);
+            free(velocities);
+            free(positions);  
             free(nextPositions);
             free(nextVelocities);
         }

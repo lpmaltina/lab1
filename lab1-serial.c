@@ -86,40 +86,41 @@ int main(){
     FILE *outputFile;
     double time;
     double start, end;
-    double writingStart, writingEnd;
 
     for (bodies = 64; bodies <= 1024; bodies *= 2){
         sprintf(inputFileName, "input/input-%d.txt", bodies);
+        masses = (double *)malloc(bodies * sizeof(double));
+        positions = (vec *)malloc(bodies * sizeof(vec));
+        velocities = (vec *)malloc(bodies * sizeof(vec));
+        accelerations = (vec *)malloc(bodies * sizeof(vec));
         for (timeSteps = 10; timeSteps <= 1000; timeSteps *= 10){
             initiateSystem(inputFileName);
-            sprintf(
-                outputFileName,
-                "output/output-serial-%d-%d.csv",
-                bodies,
-                timeSteps
-            );
-            outputFile = fopen(outputFileName, "w+");
-            writeHeader(outputFile);
+            // sprintf(
+            //     outputFileName,
+            //     "output/output-serial-%d-%d.csv",
+            //     bodies,
+            //     timeSteps
+            // );
+            // outputFile = fopen(outputFileName, "w+");
+            // writeHeader(outputFile);
             
             time = 0;
             GET_TIME(start);
             for (timeStep = 1; timeStep < timeSteps + 1; ++timeStep){
                 simulate();
-                GET_TIME(writingStart);
-                writeTimeStepInfo(outputFile, timeStep);
-                GET_TIME(writingEnd);
-                time -= writingEnd - writingStart;
+                // writeTimeStepInfo(outputFile, timeStep);
             }
             GET_TIME(end);
             time += end - start;
 
-            fclose(outputFile);
+            // fclose(outputFile);
             printf("bodies=%d, timeSteps=%d: %f\n", bodies, timeSteps, time);
-            free(masses);
-            free(accelerations);
-            free(velocities);
-            free(positions);
+            
         }
+        free(masses);
+        free(accelerations);
+        free(velocities);
+        free(positions);
     }
     return 0;
 }

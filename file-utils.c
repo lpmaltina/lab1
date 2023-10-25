@@ -1,4 +1,4 @@
-/* Код для чтения из файлов директории input и
+/* Код для чтения файлов директории input и
 записи в файлы директории output */
 #include "file-utils.h"
 
@@ -9,13 +9,8 @@ vec *positions, *velocities, *accelerations;
 void initiateSystem(char *fileName){
     int i;
     FILE *fp = fopen(fileName, "r");
-
     fscanf(fp, "%d", &bodies);
-    masses = (double *)malloc(bodies * sizeof(double));
-    positions = (vec *)malloc(bodies * sizeof(vec));
-    velocities = (vec *)malloc(bodies * sizeof(vec));
-    accelerations = (vec *)malloc(bodies * sizeof(vec));
-
+    
     for (i = 0; i < bodies; ++i){
         fscanf(fp, "%lf", &masses[i]);
         fscanf(fp, "%lf%lf", &positions[i].x, &positions[i].y);
