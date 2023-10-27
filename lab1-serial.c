@@ -1,11 +1,14 @@
 #include "universal.h"
 
 
+#define FILE_OUTPUT "output/output-serial-10-10"
+
+
 void computeAccels()
 {
     int i = 0;
 	int j = 0;
-	double denom = 0.;
+	long double denom = 0.;
 
 	vec vec_pose_diff = {0};
 	vec vec_without_mass = {0};
@@ -19,9 +22,9 @@ void computeAccels()
         for (j = i + 1; j < bodies; j++) {
 			vec_pose_diff = subVecs(poses[j], poses[i]);
 			denom = pow(modVec(vec_pose_diff), 3);
-			/* if (denom < eps){ */
-				/* denom = eps; */
-			/* } */
+			if (denom < EPS) {
+				denom = EPS;
+			}
 			vec_without_mass = scaleVec(GravConst / denom, vec_pose_diff);
 			vec_acc_j = accels[j];
 			vec_acc_ij = scaleVec(masses[j], vec_without_mass);
@@ -34,21 +37,39 @@ void computeAccels()
     }
 }
 
+void computeVels() {
+	int i;
+	for (i = 0; i < bodies; i++) {
+		vels[i] = addVecs(vels[i], scaleVec(DT, accels[i]));
+	}
+	return;
+}
+
+void computePoses() {
+	int i;
+	for (i = 0; i < bodies; i++) {
+		poses[i] = addVecs(poses[i], scaleVec(DT, vels[i]));
+	}
+	return;
+}
+
 void* routine()
 {
 	int i = 0;
 	int j = 0;
 
-	for (i = 0; i < 1; i++) {
+	for (i = 0; i < timeSteps; i++) {
 		
 		for (j = 0; j < bodies; j++) {
 			accels[j] = vecEmpty;
 		}
 
 		computeAccels();
-		fprintf(fOut, "%d\t", i + 1);
+		computePoses();
+		computeVels();
+		fprintf(fOut, "%d\n", i + 1);
 		for (j = 0; j < bodies; j++) {
-			fprintf(fOut, "%.20lf\t%.20lf\t", accels[j].x, accels[j].y);
+			fprintf(fOut, "%.15Lf, %.15Lf\n", poses[j].x, poses[j].y);
 		}
 		fprintf(fOut, "\n");
 	}
@@ -58,9 +79,7 @@ void* routine()
 
 int main()
 {
-	rslt = initiateSystem(
-		"input/input-10-10",
-		"output/output-serial-10-10");
+	rslt = initiateSystem(FILE_INPUT, FILE_OUTPUT);
 	if (rslt != 0) { return 1; }
 
 	routine();

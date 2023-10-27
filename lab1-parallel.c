@@ -37,8 +37,8 @@ void computeAccels(int start, int finish)
 			vec_pose_diff = subVecs(poses[j], poses[i]);
 
 			denom = pow(modVec(vec_pose_diff), 3);
-			if (denom < eps){
-				denom = eps;
+			if (denom < EPS){
+				denom = EPS;
 			}
 
 			vec_without_mass = scaleVec(GravConst / denom, vec_pose_diff);
@@ -62,7 +62,7 @@ void computeAccels(int start, int finish)
     }
 }
 
-void computeVels(int start, int finish)
+void computeVelsNxt(int start, int finish)
 {
     int i = 0;
     for (i = start; i < finish; i++) {
@@ -70,7 +70,7 @@ void computeVels(int start, int finish)
 	}
 }
 
-void computePoses(int start, int finish)
+void computePosesNxt(int start, int finish)
 {
     int i = 0;
     for (i = start; i < finish; i++) {
@@ -96,7 +96,7 @@ void* routine(void* nthread)
     int my_first_point = my_nthread * my_points;
     int my_last_point = my_first_point + my_points;
 
-	printf("my  first  point's  x:  %f\n", poses[my_first_point].x);
+	printf("my  first  point's  x:  %Lf\n", poses[my_first_point].x);
 
      for (i = 0; i < timeSteps; ++i) {
 
@@ -107,22 +107,22 @@ void* routine(void* nthread)
         }
 
         computeAccels(my_first_point, my_last_point);
-        computePoses(my_first_point, my_last_point); 
-        computeVels(my_first_point, my_last_point);
+        computePosesNxt(my_first_point, my_last_point); 
+        computeVelsNxt(my_first_point, my_last_point);
 
 		pthread_mutex_unlock(&mutex);
 
         pthread_barrier_wait(&barrier);
         updateArrays(my_first_point, my_last_point);
 		if (my_nthread == 0) {
-			printf("my first point's x now: %i %f\n", i, poses[my_first_point].x);
+			printf("my first point's x now: %i %Lf\n", i, poses[my_first_point].x);
 		}
         pthread_barrier_wait(&barrier);
 
         if (my_nthread == 0){
             fprintf(fOut, "%d\t", i + 1);
             for (j = 0; j < bodies; j++){
-                fprintf(fOut, "%.20f\t%.20f\t", poses[j].x, poses[j].y);
+                fprintf(fOut, "%.20Lf\t%.20Lf\t", poses[j].x, poses[j].y);
             }
             fprintf(fOut, "\n");
         }

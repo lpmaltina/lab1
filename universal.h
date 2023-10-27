@@ -8,12 +8,16 @@
 
 
 #define DT 0.05
-#define eps 0.00000001
+#define EPS 0.00000001
+
+
+#define FILE_INPUT "input/input-10-10"
+#define FILE_OUTPUT "output/output-10-10" /* WARN! might be redefined later */
 
 
 struct vec {
-	double x;
-	double y;
+	long double x;
+	long double y;
 };
 const struct vec vecEmpty = {0};
 
@@ -30,13 +34,13 @@ struct vec subVecs(struct vec a, struct vec b)
 	return c;
 }
 
-struct vec scaleVec(double b, struct vec a)
+struct vec scaleVec(long double b, struct vec a)
 {
 	struct vec c = { a.x * b, a.y * b };
 	return c;
 }
 
-double modVec(struct vec a)
+long double modVec(struct vec a)
 {
 	return sqrt(a.x * a.x + a.y * a.y);
 }
@@ -44,8 +48,8 @@ double modVec(struct vec a)
 
 int bodies = 0;
 int timeSteps = 0;
-double* masses = NULL;
-double GravConst = 0.;
+long double* masses = NULL;
+long double GravConst = 0.;
 
 FILE *fOut = NULL;
 
@@ -58,8 +62,9 @@ struct vec *vels = NULL;
 
 int initiateSystem(char *str_fIn, char *str_fOut)
 {
-	int i = 0;
-	int j = 0;
+	int i;
+	int j;
+
 	FILE *fIn = NULL;
 
     fIn = fopen(str_fIn, "r");
@@ -67,18 +72,18 @@ int initiateSystem(char *str_fIn, char *str_fOut)
 		printf("err: cannot open input file\n");
 		return 1;
 	}
-    fscanf(fIn, "%lf%d%d", &GravConst, &bodies, &timeSteps);
+    fscanf(fIn, "%Lf%d%d", &GravConst, &bodies, &timeSteps);
 
-    masses = calloc(bodies, sizeof(double));
+    masses = calloc(bodies, sizeof(long double));
     accels = calloc(bodies, sizeof(struct vec));
     poses = calloc(bodies, sizeof(struct vec));
     vels = calloc(bodies, sizeof(struct vec));
 
     for (i = 0; i < bodies; i++)
     {
-        fscanf(fIn, "%lf", &masses[i]);
-        fscanf(fIn, "%lf%lf", &poses[i].x, &poses[i].y);
-        fscanf(fIn, "%lf%lf", &vels[i].x, &vels[i].y);
+        fscanf(fIn, "%Lf", &masses[i]);
+        fscanf(fIn, "%Lf%Lf", &poses[i].x, &poses[i].y);
+        fscanf(fIn, "%Lf%Lf", &vels[i].x, &vels[i].y);
     }
 
     fclose(fIn);
@@ -89,11 +94,11 @@ int initiateSystem(char *str_fIn, char *str_fOut)
 		return 1;
 	}
 
-    fprintf(fOut, "t\t");
-    for (j = 1; j < bodies + 1; ++j){
-        fprintf(fOut, "x%d\ty%d\t", j, j);
-    }
-    fprintf(fOut, "\n");
+    /* fprintf(fOut, "t\t"); */
+    /* for (j = 1; j < bodies + 1; ++j){ */
+    /*     fprintf(fOut, "x%d\ty%d\t", j, j); */
+    /* } */
+    /* fprintf(fOut, "\n"); */
 
 	return 0;
 }

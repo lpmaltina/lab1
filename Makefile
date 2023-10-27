@@ -1,24 +1,24 @@
 CC:=gcc
-CFLAGS:=-g -Wall -Wextra -pedantic -O0 -Wno-unused-variable
+CFLAGS:=-g -Wall -Wextra -pedantic -Wno-unused-variable -O3 #-Wno-builtin-macro-redefined -m128bit-long-double
 
 
 all: generate-input.run lab1-parallel.run lab1-serial.run lab1-parallel-ku.run
 
 
 generate-input.run: generate-input.c
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $< -o $@
 
 
 lab1-parallel.run: lab1-parallel.c universal.h
-	$(CC) $(CFLAGS) lab1-parallel.c -lm -pthread -o $@
+	$(CC) $(CFLAGS) $< -lm -pthread -o $@
 
 
 lab1-serial.run: lab1-serial.c universal.h
-	$(CC) $(CFLAGS) lab1-serial.c -lm -o $@
+	$(CC) $(CFLAGS) $< -lm -o $@
 
 
 lab1-parallel-ku.run: lab1-parallel-ku.c universal.h
-	$(CC) $(CFLAGS) lab1-parallel-ku.c -lm -pthread -o $@
+	$(CC) $(CFLAGS) $< -lm -pthread -o $@
 
 
 clean:
