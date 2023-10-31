@@ -14,7 +14,7 @@ double computationsTime;
 int timeSteps;
 vec *nextPositions, *nextVelocities;
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t* mutexes = {0};
 
 /* Функция для вычисления ускорений.
 Обновляет часть глобального массив accelerations
@@ -48,13 +48,13 @@ void computeAccelerations(int bgg, int end)
 			vec_acc_ji = scaleVector(-masses[i], vec_without_mass);
 			vec_acc_i = addVectors(vec_acc_i, vec_acc_ij);
 
-			pthread_mutex_lock(&mutex);
+			pthread_mutex_lock(&mutexes[j]);
 			accelerations[j] = addVectors(accelerations[j], vec_acc_ji);
-			pthread_mutex_unlock(&mutex);
+			pthread_mutex_unlock(&mutexes[j]);
         }
-		pthread_mutex_lock(&mutex);
+		pthread_mutex_lock(&mutexes[i]);
 		accelerations[i] = addVectors(accelerations[i], vec_acc_i);
-		pthread_mutex_unlock(&mutex);
+		pthread_mutex_unlock(&mutexes[i]);
     }
 
 	return;
@@ -164,13 +164,18 @@ int main(){
     fprintf(timingsFile, "threads\tbodies\ttimeSteps\ttime\n");
 
     for (threadCount = 1; threadCount <= 8; threadCount *= 2){
-        for (bodies = 64; bodies <= 1024; bodies *= 2){
+        for (bodies = 64; bodies <= 256; bodies *= 2){
             masses = (double *)malloc(bodies * sizeof(double));
             positions = (vec *)malloc(bodies * sizeof(vec));
             velocities = (vec *)malloc(bodies * sizeof(vec));
             accelerations = (vec *)malloc(bodies * sizeof(vec));
             nextPositions = (vec *)malloc(bodies * sizeof(vec));
             nextVelocities = (vec *)malloc(bodies * sizeof(vec));
+			mutexes = malloc(bodies * sizeof(pthread_mutex_t));
+			for (i = 0; i < bodies; i++) {
+				pthread_mutex_init(&mutexes[i], NULL);
+			}
+
             sprintf(inputFileName, "input/input-%d.txt", bodies);
             for (timeSteps = 10; timeSteps <= 1000; timeSteps *= 10){
                 initiateSystem(inputFileName);
@@ -225,6 +230,11 @@ int main(){
                 );
                 // fclose(outputFile);
             }
+
+			for (i = 0; i < bodies; i++) {
+				pthread_mutex_destroy(&mutexes[i]);
+			}
+			free(mutexes);
             free(masses);
             free(accelerations);
             free(velocities);
