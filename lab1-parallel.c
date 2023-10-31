@@ -14,36 +14,50 @@ double computationsTime;
 int timeSteps;
 vec *nextPositions, *nextVelocities;
 
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 /* Функция для вычисления ускорений.
 Обновляет часть глобального массив accelerations
-с индекса start (включительно) до индекса finish (невключительно). */
-void computeAccelerations(int start, int finish){
-    int i, j;
-    vec accelerationI;
-    vec positionsDiff;
-    double denominator;
-    vec withoutMass;
-    vec accelerationIJ;
+с индекса bgg (включительно) до индекса end (невключительно). */
+void computeAccelerations(int bgg, int end)
+{
+    int i;
+	int j;
 
-    for (i = start; i < finish; ++i){
-        accelerations[i].x = 0;
-        accelerations[i].y = 0;
-        accelerationI = accelerations[i];
-        for (j = 0; j < bodies; ++j){
-            if (i != j){
-                positionsDiff = subtractVectors(positions[j], positions[i]);
-                denominator = pow(modVector(positionsDiff), 3);
-                if (denominator < EPS){
-                    denominator = EPS;
-                }
-                withoutMass = scaleVector(G / denominator, positionsDiff);
-                accelerationIJ = scaleVector(masses[j], withoutMass);
-                accelerationI = addVectors(accelerationI, accelerationIJ);
-               
-            }
+	long double denom = 0.l;
+	vec vec_pose_diff = {0};
+	vec vec_without_mass = {0};
+	vec vec_acc_i = {0};
+	vec vec_acc_j = {0};
+	vec vec_acc_ij = {0};
+	vec vec_acc_ji = {0};
+
+    for (i = bgg; i < end; i++) {
+		vec_acc_i.x = 0;
+		vec_acc_i.y = 0;
+
+        for (j = i + 1; j < bodies; j++) {
+			vec_pose_diff = subtractVectors(positions[j], positions[i]);
+			denom = pow(modVector(vec_pose_diff), 3);
+			if (denom < EPS) {
+				denom = EPS;
+			}
+			vec_without_mass = scaleVector(G / denom, vec_pose_diff);
+
+			vec_acc_ij = scaleVector(masses[j], vec_without_mass);
+			vec_acc_ji = scaleVector(-masses[i], vec_without_mass);
+			vec_acc_i = addVectors(vec_acc_i, vec_acc_ij);
+
+			pthread_mutex_lock(&mutex);
+			accelerations[j] = addVectors(accelerations[j], vec_acc_ji);
+			pthread_mutex_unlock(&mutex);
         }
-        accelerations[i] = accelerationI;
+		pthread_mutex_lock(&mutex);
+		accelerations[i] = addVectors(accelerations[i], vec_acc_i);
+		pthread_mutex_unlock(&mutex);
     }
+
+	return;
 }
 
 /* Функция для вычисления скоростей.
