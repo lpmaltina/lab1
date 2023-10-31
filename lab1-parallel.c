@@ -119,24 +119,88 @@ void updateArrays(int start, int finish){
 координаты точек для нового временного шага. 
 
 Время записи в файл вычитается из времени вычислений. */
-void* routine(void* nthread){
-    long long myNthread = (long long) nthread;
-    int myPoints = bodies / threadCount;
-    int myFirstPoint = myNthread * myPoints;
-    int myLastPoint = myFirstPoint + myPoints;
-    int timeStep;
+void* routine(void* nthread)
+{
+	int i;
 
-    for (timeStep = 1; timeStep < timeSteps + 1; ++timeStep){
-        computeAccelerations(myFirstPoint, myLastPoint);
-        computePositions(myFirstPoint, myLastPoint); 
-        computeVelocities(myFirstPoint, myLastPoint);
+    long long nth = (long long) nthread;
+	double edgesPerThread = bodies * (bodies - 1) / (double) threadCount;
+	int bgg;
+	int end;
+
+/* How many bodies per thread do we need? In the best case, every       */
+/* thread shall process approximately equal number of edges between.    */
+/* vertices. Number of edges between vertices is n * (n - 1) / 2.       */
+/* */
+/* bodies * (bodies - 1) / 2 = edges                                    */
+/* (1) edgesPerThread = edges / thread_count  =>                        */
+/*  =>  edgesThreadFst = edges / thread_count, however                  */
+/* */
+/* edgesThreadFst = vertsThreadFst * (vertsThreadFst - 1) / 2     =>    */
+/*  =>  vertsThreadFst^2 - vertsThreadFst - 2*edgesThreadFst = 0  =>    */
+/*  =>  vertsThreadFst = 1 +/- sqrt(1 + 4*2*edgesThreadFst), however    */
+/* */
+/* 1 - sqrt(1 + 4*2*edgesThreadFst) is always negative, so              */
+/* vertsThreadFst = 1 + sqrt(1 + 4*2*edgesThreadFst)                    */
+/* */
+/* using (1) we get:                                                    */
+/* vertsThreadFst = 1 + sqrt(1 + 8*(1 * (edges / thread_count)), SO     */
+/* 1ST THREAD USES VERTS FROM 0 to vertsThreadFst - 1                   */
+/* */
+/* vertsThreadSnd = 1 + sqrt(1 + 8*(2 * (edges / thread_count)), SO     */
+/* 2nd thread should(??) use verts from 0 to vertsThreadSnd - 1, BUT    */
+/* from 0 to vertsThreadFst - 1 are already taken by 1st thread, THEN   */
+/* 2ND THREAD USES VERTS FROM vertsThreadFst to vertsThreadSnd - 1      */
+/* */
+/* vertsThreadTrd = 1 + sqrt(1 + 8*(3 * (edges / thread_count)), SO     */
+/* 3rd thread should(??) use verts from 0 to vertsThreadTrd - 1, BUT    */
+/* from 0 to vertsThreadFst - 1 are already taken by 1st thread, AND    */
+/* from vertsThreadFst to vertsThreadSnd -1 taken by 2nd thread, THEN   */
+/* 3RD THREAD USES VERTS FROM vertsThreadSnd to vertsThreadTrd - 1      */
+/* */
+/* vertsThreadFth = 1 + sqrt(1 + 8*(4 * (edges / thread_count)), SO     */
+/* 4th thread should(??) use verts from 0 to vertsThreadFth - 1, BUT    */
+/* from 0 to vertsThreadFst - 1 are already taken by 1st thread, AND    */
+/* from vertsThreadFst to vertsThreadSnd -1 taken by 2st thread, AND    */
+/* from vertsThreadSnd to vertsThreadTrd -1 taken by 3st thread, THEN   */
+/* 4TH THREAD USES VERTS FROM vertsThreadTrd to vertsThreadTrd - 1      */
+/* */
+/* and so on... */
+
+	if (nth == 0) {
+		bgg = 0;
+	} else {
+		bgg = (1 + sqrt(1 + 4*(nth)*edgesPerThread)) / 2.;
+	}
+
+	if (nth == bodies - 1) {
+		end = bodies;
+	} else if (nth > bodies - 1) {
+		bgg = bodies;
+		end = bodies;
+	} else {
+		end = (1 + sqrt(1 + 4*(nth + 1)*edgesPerThread)) / 2.;
+	}
+
+	bgg = 2*((bodies - 1) / 2) - bgg + (bodies % 2 != 1) + 1;
+	end = 2*((bodies - 1) / 2) - end + (bodies % 2 != 1) + 1;
+
+	bgg = bgg + end;
+	end = bgg - end;
+	bgg = bgg - end;
+
+    for (i = 0; i < timeSteps; ++i){
+        computeAccelerations(bgg, end);
+        computePositions(bgg, end);
+        computeVelocities(bgg, end);
         pthread_barrier_wait(&barrier);
-        updateArrays(myFirstPoint, myLastPoint);
+        updateArrays(bgg, end);
         pthread_barrier_wait(&barrier);
-        // if (myNthread == 0){
-        //     writeTimeStepInfo(outputFile, timeStep);
+        // if (nth == 0){
+        //     writeTimeStepInfo(outputFile, timeStep + 1);
         // }
     }
+
     return NULL;
 }
 
